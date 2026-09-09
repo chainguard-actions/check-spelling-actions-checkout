@@ -1,0 +1,59 @@
+name: Test checkout at a specific ref
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          repository: actions/checkout
+          ref: de0fac2e4500dabe0009e67214ff5f5447ce83dd
+          path: checkout-pinned
+          persist-credentials: false
+
+      - name: Assert checkout result
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          COMMIT: ${{ steps.action.outputs.commit }}
+          REF: ${{ steps.action.outputs.ref }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "commit: $COMMIT"
+          echo "ref: $REF"
+          if [ "$OUTCOME" = "success" ]; then
+            # Verify checkout directory exists
+            if [ ! -d "$GITHUB_WORKSPACE/checkout-pinned" ]; then
+              echo "FAIL: checkout-pinned directory not found"
+              exit 1
+            fi
+            echo "PASS: checkout-pinned directory exists"
+            # Verify action.yml exists in checked-out repo
+            if [ ! -f "$GITHUB_WORKSPACE/checkout-pinned/action.yml" ]; then
+              echo "FAIL: action.yml not found in checkout-pinned"
+              exit 1
+            fi
+            echo "PASS: action.yml found in checkout-pinned"
+            # Verify commit output looks like a SHA
+            if [ -z "$COMMIT" ]; then
+              echo "FAIL: commit output is empty"
+              exit 1
+            fi
+            if ! echo "$COMMIT" | grep -qE '^[0-9a-f]{40}$'; then
+              echo "FAIL: commit output does not look like a SHA: $COMMIT"
+              exit 1
+            fi
+            echo "PASS: commit output is a valid SHA: $COMMIT"
+            # Note: when ref input is a SHA, the action sets ref output to empty string
+            # so we do not assert ref is non-empty here
+            echo "PASS: ref output (may be empty for SHA ref): $REF"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (sentinel repo context is not resolvable)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

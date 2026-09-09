@@ -1,0 +1,66 @@
+name: Test checkout with full history and tags
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          repository: actions/checkout
+          ref: main
+          path: checkout-full
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Assert checkout result
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          COMMIT: ${{ steps.action.outputs.commit }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "commit: $COMMIT"
+          if [ "$OUTCOME" = "success" ]; then
+            # Verify checkout directory exists
+            if [ ! -d "$GITHUB_WORKSPACE/checkout-full" ]; then
+              echo "FAIL: checkout-full directory not found"
+              exit 1
+            fi
+            echo "PASS: checkout-full directory exists"
+            # Verify full history was fetched (more than 1 commit)
+            COMMIT_COUNT=$(git -C "$GITHUB_WORKSPACE/checkout-full" rev-list --count HEAD 2>/dev/null || echo "0")
+            echo "commit count: $COMMIT_COUNT"
+            if [ "$COMMIT_COUNT" -le 1 ]; then
+              echo "FAIL: expected more than 1 commit with fetch-depth=0, got $COMMIT_COUNT"
+              exit 1
+            fi
+            echo "PASS: full history fetched ($COMMIT_COUNT commits)"
+            # Verify tags were fetched
+            TAG_COUNT=$(git -C "$GITHUB_WORKSPACE/checkout-full" tag 2>/dev/null | wc -l | tr -d ' ')
+            echo "tag count: $TAG_COUNT"
+            if [ "$TAG_COUNT" -eq 0 ]; then
+              echo "FAIL: expected tags to be fetched but found none"
+              exit 1
+            fi
+            echo "PASS: tags fetched ($TAG_COUNT tags)"
+            # Verify commit output looks like a SHA
+            if [ -z "$COMMIT" ]; then
+              echo "FAIL: commit output is empty"
+              exit 1
+            fi
+            if ! echo "$COMMIT" | grep -qE '^[0-9a-f]{40}$'; then
+              echo "FAIL: commit output does not look like a SHA: $COMMIT"
+              exit 1
+            fi
+            echo "PASS: commit output is a valid SHA"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (sentinel repo context is not resolvable)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

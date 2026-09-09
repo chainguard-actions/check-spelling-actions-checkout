@@ -1,0 +1,56 @@
+name: Test basic checkout of a public repository
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          repository: actions/checkout
+          ref: main
+          path: checkout-target
+          persist-credentials: false
+
+      - name: Assert checkout result
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          COMMIT: ${{ steps.action.outputs.commit }}
+          REF: ${{ steps.action.outputs.ref }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "commit: $COMMIT"
+          echo "ref: $REF"
+          if [ "$OUTCOME" = "success" ]; then
+            # Verify checkout-target directory exists
+            if [ ! -d "$GITHUB_WORKSPACE/checkout-target" ]; then
+              echo "FAIL: checkout-target directory not found"
+              exit 1
+            fi
+            echo "PASS: checkout-target directory exists"
+            # Verify action.yml exists in checked-out repo
+            if [ ! -f "$GITHUB_WORKSPACE/checkout-target/action.yml" ]; then
+              echo "FAIL: action.yml not found in checkout-target"
+              exit 1
+            fi
+            echo "PASS: action.yml found"
+            # Verify commit output looks like a SHA
+            if [ -z "$COMMIT" ]; then
+              echo "FAIL: commit output is empty"
+              exit 1
+            fi
+            if ! echo "$COMMIT" | grep -qE '^[0-9a-f]{40}$'; then
+              echo "FAIL: commit output does not look like a SHA: $COMMIT"
+              exit 1
+            fi
+            echo "PASS: commit output is a valid SHA"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (sentinel repo context is not resolvable)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

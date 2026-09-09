@@ -1,0 +1,23 @@
+{
+    "problemMatcher": [
+        {
+            "owner": "checkout-git-local-not-git-repo",
+            "severity": "notice",
+            "pattern": [
+                {
+                    "regexp": "fatal: (--local can only be used inside a git repository)",
+                    "message": 1
+                }
+            ]
+        },
+        {
+            "owner": "checkout-git",
+            "pattern": [
+                {
+                    "regexp": "^(fatal|error): (.*)$",
+                    "message": 2
+                }
+            ]
+        }
+    ]
+}

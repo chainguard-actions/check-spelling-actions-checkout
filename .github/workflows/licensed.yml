@@ -1,0 +1,17 @@
+name: Licensed
+
+on:
+  push: {branches: main}
+  pull_request: {branches: main}
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Check licenses
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - run: npm ci
+      - run: npm run licensed-check
