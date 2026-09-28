@@ -8,6 +8,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
+| v3 | [`v3`](https://github.com/chainguard-actions/check-spelling-actions-checkout/tree/v3) | [`c12e728`](https://github.com/check-spelling/actions-checkout/commit/c12e7286cb39113c32dd06ac576ed748853ee61e) |
 | v4 | [`v4`](https://github.com/chainguard-actions/check-spelling-actions-checkout/tree/v4) | [`cb50106`](https://github.com/check-spelling/actions-checkout/commit/cb50106c205b30e86652e685b759a4fd92e25fb5) |
 
 ## Privacy
