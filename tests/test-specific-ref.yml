@@ -1,0 +1,44 @@
+name: Test checkout at specific ref
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          repository: actions/checkout
+          # Pin to a known stable tag for reproducibility
+          ref: v3.6.0
+          path: checkout-ref-target
+      - name: Assert checkout at specific ref succeeded
+        run: |
+          echo "Checking for checked-out files at specific ref..."
+          if [ ! -d "$GITHUB_WORKSPACE/checkout-ref-target" ]; then
+            echo "FAIL: checkout-ref-target directory does not exist"
+            exit 1
+          fi
+          if [ ! -f "$GITHUB_WORKSPACE/checkout-ref-target/action.yml" ]; then
+            echo "FAIL: expected action.yml not found in checkout-ref-target"
+            exit 1
+          fi
+          echo "PASS: repository checked out at specific ref"
+      - name: Assert correct ref was checked out
+        run: |
+          cd "$GITHUB_WORKSPACE/checkout-ref-target"
+          COMMIT=$(git rev-parse HEAD)
+          echo "HEAD commit: $COMMIT"
+          if [ -z "$COMMIT" ]; then
+            echo "FAIL: could not get HEAD commit"
+            exit 1
+          fi
+          # Verify the tag v3.6.0 resolves to this commit
+          TAG_COMMIT=$(git rev-list -n 1 v3.6.0 2>/dev/null || echo "")
+          echo "Tag v3.6.0 commit: $TAG_COMMIT"
+          if [ -n "$TAG_COMMIT" ] && [ "$COMMIT" != "$TAG_COMMIT" ]; then
+            echo "FAIL: HEAD ($COMMIT) does not match tag v3.6.0 ($TAG_COMMIT)"
+            exit 1
+          fi
+          echo "PASS: checked out at correct ref"

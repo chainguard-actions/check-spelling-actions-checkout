@@ -1,0 +1,40 @@
+name: Test basic checkout
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          repository: actions/checkout
+          ref: main
+          path: checkout-target
+      - name: Assert checkout succeeded
+        run: |
+          echo "Checking for checked-out files..."
+          if [ ! -d "$GITHUB_WORKSPACE/checkout-target" ]; then
+            echo "FAIL: checkout-target directory does not exist"
+            exit 1
+          fi
+          if [ ! -f "$GITHUB_WORKSPACE/checkout-target/action.yml" ]; then
+            echo "FAIL: expected action.yml not found in checkout-target"
+            exit 1
+          fi
+          echo "PASS: repository checked out successfully"
+      - name: Assert git repo is valid
+        run: |
+          cd "$GITHUB_WORKSPACE/checkout-target"
+          if ! git rev-parse --git-dir > /dev/null 2>&1; then
+            echo "FAIL: checkout-target is not a valid git repository"
+            exit 1
+          fi
+          COMMIT=$(git rev-parse HEAD)
+          echo "HEAD commit: $COMMIT"
+          if [ -z "$COMMIT" ]; then
+            echo "FAIL: could not get HEAD commit"
+            exit 1
+          fi
+          echo "PASS: valid git repository with HEAD at $COMMIT"

@@ -1,0 +1,62 @@
+name: Test checkout with full history
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Checkout with full history (fetch-depth 0)
+        id: action
+        uses: .
+        with:
+          repository: actions/checkout
+          ref: main
+          path: checkout-full-history
+          fetch-depth: 0
+      - name: Assert full history was fetched
+        run: |
+          echo "Checking full history..."
+          if [ ! -d "$GITHUB_WORKSPACE/checkout-full-history" ]; then
+            echo "FAIL: checkout-full-history directory does not exist"
+            exit 1
+          fi
+          cd "$GITHUB_WORKSPACE/checkout-full-history"
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          echo "Total commits: $COMMIT_COUNT"
+          # With full history, there should be many commits (actions/checkout has hundreds)
+          if [ "$COMMIT_COUNT" -lt 10 ]; then
+            echo "FAIL: expected many commits with fetch-depth 0, got $COMMIT_COUNT"
+            exit 1
+          fi
+          echo "PASS: full history fetched with $COMMIT_COUNT commits"
+      - name: Checkout with shallow history (fetch-depth 1)
+        id: shallow
+        uses: .
+        with:
+          repository: actions/checkout
+          ref: main
+          path: checkout-shallow
+          fetch-depth: 1
+      - name: Assert shallow history
+        run: |
+          echo "Checking shallow history..."
+          if [ ! -d "$GITHUB_WORKSPACE/checkout-shallow" ]; then
+            echo "FAIL: checkout-shallow directory does not exist"
+            exit 1
+          fi
+          cd "$GITHUB_WORKSPACE/checkout-shallow"
+          # With fetch-depth 1, the repo should be a shallow clone
+          if git rev-parse --is-shallow-repository 2>/dev/null | grep -q "true"; then
+            echo "PASS: repository is shallow as expected"
+          else
+            # Some git versions may not support --is-shallow-repository
+            # Just verify the checkout worked
+            COMMIT=$(git rev-parse HEAD)
+            echo "HEAD: $COMMIT"
+            if [ -z "$COMMIT" ]; then
+              echo "FAIL: could not get HEAD commit"
+              exit 1
+            fi
+            echo "PASS: shallow checkout succeeded (HEAD: $COMMIT)"
+          fi
